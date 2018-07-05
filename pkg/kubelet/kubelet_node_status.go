@@ -159,6 +159,7 @@ func (kl *Kubelet) updateDefaultLabels(initialNode, existingNode *v1.Node) bool 
 		kubeletapis.LabelInstanceType,
 		kubeletapis.LabelOS,
 		kubeletapis.LabelArch,
+		kubeletapis.LabelKernelVersion,
 	}
 
 	var needsUpdate bool = false
@@ -214,13 +215,19 @@ func (kl *Kubelet) reconcileCMADAnnotationWithExistingNode(node, existingNode *v
 // initialNode constructs the initial v1.Node for this Kubelet, incorporating node
 // labels, information from the cloud provider, and Kubelet configuration.
 func (kl *Kubelet) initialNode() (*v1.Node, error) {
+	verinfo, err := kl.cadvisor.VersionInfo()
+	if err != nil {
+		glog.Errorf("Error getting version info: %v", err)
+		return nil, err
+	}
 	node := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: string(kl.nodeName),
 			Labels: map[string]string{
-				kubeletapis.LabelHostname: kl.hostname,
-				kubeletapis.LabelOS:       goruntime.GOOS,
-				kubeletapis.LabelArch:     goruntime.GOARCH,
+				kubeletapis.LabelHostname:      kl.hostname,
+				kubeletapis.LabelOS:            goruntime.GOOS,
+				kubeletapis.LabelArch:          goruntime.GOARCH,
+				kubeletapis.LabelKernelVersion: verinfo.KernelVersion,
 			},
 		},
 		Spec: v1.NodeSpec{
